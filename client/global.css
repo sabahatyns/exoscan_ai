@@ -58,6 +58,15 @@
 
     --sidebar-ring: 182 98% 55%;
   }
+  /* Hide scrollbar but allow scrolling */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
 
   .dark {
     --background: 220 26% 15%;
