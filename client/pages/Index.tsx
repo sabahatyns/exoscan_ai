@@ -8,47 +8,46 @@ const MODEL_OPTIONS = [
   { value: "B", label: "Both" },
 ];
 
-// --- Field definitions ---
-const KEPLER_FIELDS = {
-  koi_period: 0,
-  koi_duration: 0,
-  koi_depth: 0,
-  koi_ror: 0,
-  koi_prad: 0,
-  koi_incl: 0,
-  koi_insol: 0,
-  koi_dor: 0,
-  koi_max_sngle_ev: 0,
-  koi_max_mult_ev: 0,
-  koi_model_snr: 0,
-  koi_smet: 0,
-  koi_fwm_stat_sig: 0,
-  koi_dicco_msky: 0,
-  koi_dikco_msky: 0,
+const KEPLER_FIELDS: Record<string, string> = {
+  koi_period: "",
+  koi_duration: "",
+  koi_depth: "",
+  koi_ror: "",
+  koi_prad: "",
+  koi_incl: "",
+  koi_insol: "",
+  koi_dor: "",
+  koi_max_sngle_ev: "",
+  koi_max_mult_ev: "",
+  koi_model_snr: "",
+  koi_smet: "",
+  koi_fwm_stat_sig: "",
+  koi_dicco_msky: "",
+  koi_dikco_msky: "",
 };
 
-const TESS_FIELDS = {
-  ra: 0,
-  dec: 0,
-  st_pmra: 0,
-  st_pmdec: 0,
-  pl_tranmid: 0,
-  pl_orbper: 0,
-  pl_trandurh: 0,
-  pl_trandep: 0,
-  pl_rade: 0,
-  pl_insol: 0,
-  pl_eqt: 0,
-  st_tmag: 0,
-  st_dist: 0,
-  st_teff: 0,
-  st_logg: 0,
-  st_rad: 0,
+const TESS_FIELDS: Record<string, string> = {
+  ra: "",
+  dec: "",
+  st_pmra: "",
+  st_pmdec: "",
+  pl_tranmid: "",
+  pl_orbper: "",
+  pl_trandurh: "",
+  pl_trandep: "",
+  pl_rade: "",
+  pl_insol: "",
+  pl_eqt: "",
+  st_tmag: "",
+  st_dist: "",
+  st_teff: "",
+  st_logg: "",
+  st_rad: "",
 };
 
 export default function Index() {
   const [model, setModel] = useState(MODEL_OPTIONS[0].value);
-const [inputs, setInputs] = useState<Record<string, number>>({});
+  const [inputs, setInputs] = useState<Record<string, string>>({}); // store strings
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [analysisResponse, setAnalysisResponse] = useState(
@@ -61,26 +60,47 @@ const [inputs, setInputs] = useState<Record<string, number>>({});
     if (model === "K") setInputs(KEPLER_FIELDS);
     else if (model === "T") setInputs(TESS_FIELDS);
     else if (model === "B") setInputs({ ...KEPLER_FIELDS, ...TESS_FIELDS });
+    setResult(null);
+    setErrorMessage("");
   }, [model]);
 
-  // 🧩 input handler
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setInputs((prev) => ({ ...prev, [name]: parseFloat(value) || 0 }));
+    setInputs((prev) => ({ ...prev, [name]: value })); // keep typed value as string
   };
 
-  // 🧩 predict function
+  const [errorMessage, setErrorMessage] = useState(""); // New state for error
+
   const handlePredict = async () => {
     setLoading(true);
+    setErrorMessage(""); // Reset previous errors
+
+    // Validate inputs
+    const invalidFields = Object.entries(inputs).filter(
+      ([_, value]) => isNaN(Number(value)) || value === "",
+    );
+
+    if (invalidFields.length > 0) {
+      setLoading(false);
+      setErrorMessage(`Invalid input in fields`);
+      return;
+    }
+
+    // Convert to numbers
+    const payload = Object.fromEntries(
+      Object.entries(inputs).map(([k, v]) => [k, parseFloat(v)]),
+    );
+
     try {
       let data;
-      if (model === "K") data = await predictKepler(inputs);
-      else if (model === "T") data = await predictTess(inputs);
-      else if (model === "B") data = await predictBoth(inputs);
+      if (model === "K") data = await predictKepler(payload);
+      else if (model === "T") data = await predictTess(payload);
+      else if (model === "B") data = await predictBoth(payload);
 
       setResult(data);
     } catch (error) {
       console.error("Prediction Error:", error);
+      setErrorMessage("Prediction failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -142,10 +162,11 @@ const [inputs, setInputs] = useState<Record<string, number>>({});
                         {key}
                       </label>
                       <input
-                        type="number"
+                        type="text" // allow numbers or strings
                         name={key}
                         value={inputs[key]}
                         onChange={handleChange}
+                        placeholder="Type here"
                         className="rounded-lg border border-secondary/50 bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-secondary/40 outline-none"
                       />
                     </div>
@@ -177,6 +198,11 @@ const [inputs, setInputs] = useState<Record<string, number>>({});
                     <pre className="text-xs whitespace-pre-wrap">
                       {JSON.stringify(result.prediction, null, 2)}
                     </pre>
+                  </div>
+                )}
+                {errorMessage && (
+                  <div className="mb-4 text-red-500 text-sm font-medium">
+                    {errorMessage}
                   </div>
                 )}
               </div>
